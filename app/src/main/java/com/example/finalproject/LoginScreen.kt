@@ -29,7 +29,10 @@ fun getGoogleSignInClient(context: Context): GoogleSignInClient {
 
 // 2. 登入畫面 UI 邏輯
 @Composable
-fun LoginScreen(onLoginSuccess: () -> Unit) {
+fun LoginScreen(
+    onLoginSuccess: () -> Unit,
+    onNavigateToSignUp: () -> Unit // 新增導航回呼
+) {
     val context = LocalContext.current
     val auth = FirebaseAuth.getInstance()
 
@@ -76,7 +79,7 @@ fun LoginScreen(onLoginSuccess: () -> Unit) {
         OutlinedTextField(
             value = password,
             onValueChange = { password = it },
-            label = { Text("密碼 (至少6碼)") },
+            label = { Text("密碼") },
             singleLine = true,
             visualTransformation = PasswordVisualTransformation(),
             modifier = Modifier.fillMaxWidth()
@@ -98,18 +101,9 @@ fun LoginScreen(onLoginSuccess: () -> Unit) {
             Text("Email 登入")
         }
 
-        TextButton(
-            onClick = {
-                if (email.isNotEmpty() && password.length >= 6) {
-                    auth.createUserWithEmailAndPassword(email, password)
-                        .addOnCompleteListener { task ->
-                            if (task.isSuccessful) onLoginSuccess()
-                            else errorMessage = task.exception?.localizedMessage
-                        }
-                }
-            }
-        ) {
-            Text("沒有帳號？點此註冊 Email")
+        // 修改為純導航功能
+        TextButton(onClick = onNavigateToSignUp) {
+            Text("沒有帳號？點此註冊")
         }
 
         HorizontalDivider(modifier = Modifier.padding(vertical = 24.dp))
