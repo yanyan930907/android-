@@ -35,18 +35,22 @@ fun MainAppContent(userEmail: String, onLogout: () -> Unit) {
 
     Scaffold(
         topBar = {
-            CenterAlignedTopAppBar(
-                title = { 
-                    Text(
-                        text = selectedScreen.title,
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 24.sp
-                    ) 
-                },
-                colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.surface
+            // 👇 加入一個判斷：如果不是在群組頁面，才顯示這個總標題列
+            // (因為你寫的 GroupMainScreen 裡面已經自帶一個漂亮的 TopAppBar 了)
+            if (selectedScreen != Screen.Groups) {
+                CenterAlignedTopAppBar(
+                    title = {
+                        Text(
+                            text = selectedScreen.title,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 24.sp
+                        )
+                    },
+                    colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
+                        containerColor = MaterialTheme.colorScheme.surface
+                    )
                 )
-            )
+            }
         },
         bottomBar = {
             NavigationBar(
@@ -71,16 +75,27 @@ fun MainAppContent(userEmail: String, onLogout: () -> Unit) {
             }
         }
     ) { innerPadding ->
+        // 👇 調整這裡的 padding，如果是群組頁面我們不吃外層的上方 padding，交給群組頁面自己處理
+        val modifier = if (selectedScreen == Screen.Groups) {
+            Modifier.fillMaxSize().padding(bottom = innerPadding.calculateBottomPadding())
+        } else {
+            Modifier.fillMaxSize().padding(innerPadding)
+        }
+
         Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(innerPadding),
+            modifier = modifier,
             contentAlignment = Alignment.Center
         ) {
             when (selectedScreen) {
                 is Screen.Home -> HomeTabContent(userEmail)
                 is Screen.Focus -> Text("專注功能開發中...")
-                is Screen.Groups -> Text("群組功能開發中...")
+                is Screen.Groups -> {
+                    // 👇 在這裡串接我們寫好的群組畫面！
+                    // 當在群組頁面按下「返回」時，把 selectedScreen 切換回主頁
+                    GroupMainScreen(
+                        onBackToHome = { selectedScreen = Screen.Home }
+                    )
+                }
                 is Screen.Settings -> SettingsTabContent(onLogout)
             }
         }

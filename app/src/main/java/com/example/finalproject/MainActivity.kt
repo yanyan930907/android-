@@ -23,8 +23,8 @@ class MainActivity : ComponentActivity() {
             FinalProjectTheme {
                 val auth = FirebaseAuth.getInstance()
                 // 觀察目前的畫面狀態：login, signup, 或已登入(home)
-                var currentScreen by remember { 
-                    mutableStateOf(if (auth.currentUser != null) "home" else "login") 
+                var currentScreen by remember {
+                    mutableStateOf(if (auth.currentUser != null) "home" else "login")
                 }
 
                 Surface(
