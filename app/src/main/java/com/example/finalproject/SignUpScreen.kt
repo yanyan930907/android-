@@ -8,14 +8,17 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.firestore.FirebaseFirestore // 👇 匯入 Firestore
 
 @Composable
 fun SignUpScreen(onSignUpSuccess: () -> Unit, onBackToLogin: () -> Unit) {
     val auth = FirebaseAuth.getInstance()
+    val db = FirebaseFirestore.getInstance() // 👇 取得資料庫實例
 
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var confirmPassword by remember { mutableStateOf("") }
+    var username by remember { mutableStateOf("") } // 👇 新增暱稱變數
     var errorMessage by remember { mutableStateOf<String?>(null) }
 
     Column(
@@ -25,6 +28,16 @@ fun SignUpScreen(onSignUpSuccess: () -> Unit, onBackToLogin: () -> Unit) {
     ) {
         Text(text = "建立帳號", style = MaterialTheme.typography.headlineLarge)
         Spacer(modifier = Modifier.height(48.dp))
+
+        // 👇 新增暱稱輸入框
+        OutlinedTextField(
+            value = username,
+            onValueChange = { username = it },
+            label = { Text("暱稱") },
+            singleLine = true,
+            modifier = Modifier.fillMaxWidth()
+        )
+        Spacer(modifier = Modifier.height(16.dp))
 
         OutlinedTextField(
             value = email,
@@ -57,8 +70,8 @@ fun SignUpScreen(onSignUpSuccess: () -> Unit, onBackToLogin: () -> Unit) {
 
         Button(
             onClick = {
-                if (email.isEmpty() || password.isEmpty()) {
-                    errorMessage = "請輸入 Email 與密碼"
+                if (username.isEmpty() || email.isEmpty() || password.isEmpty()) {
+                    errorMessage = "請填寫所有欄位"
                     return@Button
                 }
                 if (password != confirmPassword) {
@@ -70,10 +83,31 @@ fun SignUpScreen(onSignUpSuccess: () -> Unit, onBackToLogin: () -> Unit) {
                     return@Button
                 }
 
+                // 1. 先在 Auth 建立帳號
                 auth.createUserWithEmailAndPassword(email, password)
                     .addOnCompleteListener { task ->
                         if (task.isSuccessful) {
-                            onSignUpSuccess()
+                            val user = auth.currentUser
+                            if (user != null) {
+                                // 2. 準備要存入資料庫的資料 (包含上次討論的陣列)
+                                val userProfile = hashMapOf(
+                                    "uid" to user.uid,
+                                    "username" to username,
+                                    "email" to email,
+                                    "totalFocusTime" to 0,
+                                    "joinedGroups" to emptyList<String>() // 初始化為空陣列
+                                )
+
+                                // 3. 寫入 Firestore 的 users 集合
+                                db.collection("users").document(user.uid)
+                                    .set(userProfile)
+                                    .addOnSuccessListener {
+                                        onSignUpSuccess() // 資料庫寫入成功才跳轉畫面
+                                    }
+                                    .addOnFailureListener { e ->
+                                        errorMessage = "資料庫建立失敗: ${e.message}"
+                                    }
+                            }
                         } else {
                             errorMessage = task.exception?.localizedMessage
                         }

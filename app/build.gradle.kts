@@ -61,4 +61,5 @@ dependencies {
     implementation("com.google.firebase:firebase-firestore")
 
     implementation(libs.play.services.auth)
+    implementation("com.google.firebase:firebase-firestore")
 }

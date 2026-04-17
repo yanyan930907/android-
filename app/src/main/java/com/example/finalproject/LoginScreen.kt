@@ -17,6 +17,7 @@ import com.google.android.gms.auth.api.signin.GoogleSignInOptions
 import com.google.android.gms.common.api.ApiException
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.GoogleAuthProvider
+import com.google.firebase.firestore.FirebaseFirestore
 
 // 1. Google 登入客戶端設定
 fun getGoogleSignInClient(context: Context): GoogleSignInClient {
@@ -47,9 +48,37 @@ fun LoginScreen(
         try {
             val account = task.getResult(ApiException::class.java)!!
             val credential = GoogleAuthProvider.getCredential(account.idToken, null)
+
             auth.signInWithCredential(credential).addOnCompleteListener { authTask ->
                 if (authTask.isSuccessful) {
-                    onLoginSuccess()
+                    val user = auth.currentUser
+                    // 👇 Firebase 有提供一個屬性，可以判斷這是不是一個「全新建立」的帳號
+                    val isNewUser = authTask.result?.additionalUserInfo?.isNewUser == true
+
+                    if (isNewUser && user != null) {
+                        // 如果是新帳號，就幫他在 Firestore 建立資料
+                        val db = FirebaseFirestore.getInstance()
+                        val userProfile = hashMapOf(
+                            "uid" to user.uid,
+                            // Google 帳號通常會自帶顯示名稱 (displayName)，如果沒有就給個預設值
+                            "username" to (user.displayName ?: "Google 使用者"),
+                            "email" to user.email,
+                            "totalFocusTime" to 0,
+                            "joinedGroups" to emptyList<String>()
+                        )
+
+                        db.collection("users").document(user.uid)
+                            .set(userProfile)
+                            .addOnSuccessListener {
+                                onLoginSuccess()
+                            }
+                            .addOnFailureListener { e ->
+                                errorMessage = "資料庫建立失敗: ${e.message}"
+                            }
+                    } else {
+                        // 如果是老手登入，資料庫早就有資料了，直接跳轉即可
+                        onLoginSuccess()
+                    }
                 } else {
                     errorMessage = authTask.exception?.localizedMessage ?: "Firebase 驗證失敗"
                 }
