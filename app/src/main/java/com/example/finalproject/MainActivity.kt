@@ -4,12 +4,14 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.compose.foundation.layout.*
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
-import androidx.compose.ui.Alignment
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.unit.dp
 import com.example.finalproject.ui.theme.FinalProjectTheme
 import com.google.firebase.auth.FirebaseAuth
 
@@ -43,7 +45,6 @@ class MainActivity : ComponentActivity() {
                             )
                         }
                         "home" -> {
-                            // 恢復之前版本的 MainAppContent
                             MainAppContent(
                                 userEmail = auth.currentUser?.email ?: "使用者",
                                 onLogout = {
@@ -55,22 +56,6 @@ class MainActivity : ComponentActivity() {
                     }
                 }
             }
-        }
-    }
-}
-
-@Composable
-fun MainAppContent(userEmail: String, onLogout: () -> Unit) {
-    Column(
-        modifier = Modifier.fillMaxSize(),
-        verticalArrangement = Arrangement.Center,
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        Text(text = "歡迎回來！", style = MaterialTheme.typography.headlineMedium)
-        Text(text = userEmail, style = MaterialTheme.typography.bodyLarge)
-        Spacer(modifier = Modifier.height(24.dp))
-        Button(onClick = onLogout) {
-            Text("登出帳號")
         }
     }
 }
