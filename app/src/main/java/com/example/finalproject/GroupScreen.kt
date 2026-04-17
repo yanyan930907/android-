@@ -5,19 +5,25 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.unit.dp
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.ListenerRegistration
+import androidx.compose.ui.platform.LocalClipboardManager
+
 
 // 1. 群組資料結構
 data class Group(val id: String, val name: String, val memberCount: Int)
@@ -269,6 +275,10 @@ fun JoinGroupDialog(onDismiss: () -> Unit, onJoin: (String) -> Unit) {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun GroupDetailScreen(group: Group, onBackClick: () -> Unit) {
+    // 1. 取得剪貼簿管理員與 Context (用來顯示 Toast)
+    val clipboardManager = LocalClipboardManager.current
+    val context = LocalContext.current
+
     Scaffold(
         topBar = {
             TopAppBar(
@@ -281,9 +291,52 @@ fun GroupDetailScreen(group: Group, onBackClick: () -> Unit) {
             )
         }
     ) { innerPadding ->
-        Column(modifier = Modifier.fillMaxSize().padding(innerPadding).padding(16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(innerPadding)
+                .padding(16.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
             Text(text = "群組邀請碼", style = MaterialTheme.typography.titleMedium)
-            Text(text = group.id, style = MaterialTheme.typography.headlineMedium, color = MaterialTheme.colorScheme.primary)
+            Spacer(modifier = Modifier.height(8.dp))
+
+            // 2. 將邀請碼與複製按鈕包在一個有底色的區塊中，增加可點擊的視覺提示
+            Surface(
+                modifier = Modifier
+                    .clip(RoundedCornerShape(8.dp))
+                    .clickable {
+                        // 點擊文字區塊時的複製動作
+                        clipboardManager.setText(AnnotatedString(group.id))
+                        Toast.makeText(context, "邀請碼已複製！", Toast.LENGTH_SHORT).show()
+                    },
+                color = MaterialTheme.colorScheme.surfaceVariant
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)
+                ) {
+                    Text(
+                        text = group.id,
+                        style = MaterialTheme.typography.headlineSmall,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Icon(
+                        imageVector = Icons.Default.ContentCopy,
+                        contentDescription = "複製邀請碼",
+                        tint = MaterialTheme.colorScheme.primary
+                    )
+                }
+            }
+
+            Text(
+                text = "點擊即可複製邀請碼分享給朋友",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(top = 8.dp)
+            )
+
             Spacer(modifier = Modifier.height(32.dp))
             Text(text = "排行榜功能開發中...", style = MaterialTheme.typography.bodyLarge)
         }
