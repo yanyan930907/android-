@@ -47,6 +47,7 @@ sealed class Screen(val route: String, val titleResId: Int, val icon: ImageVecto
 fun MainAppContent(userEmail: String, onLogout: () -> Unit) {
     var selectedScreen by remember { mutableStateOf<Screen>(Screen.Home) }
     val focusViewModel: FocusViewModel = viewModel()
+    val themeViewModel: ThemeViewModel = viewModel()
     
     val items = listOf(
         Screen.Home,
@@ -131,7 +132,7 @@ fun MainAppContent(userEmail: String, onLogout: () -> Unit) {
                 is Screen.Home -> HomeTabContent(userEmail)
                 is Screen.Focus -> FocusTabContent(focusViewModel)
                 is Screen.Groups -> GroupMainScreen(onBackToHome = { selectedScreen = Screen.Home })
-                is Screen.Settings -> SettingsTabContent(onLogout)
+                is Screen.Settings -> SettingsTabContent(onLogout, themeViewModel)
             }
         }
     }
@@ -317,7 +318,7 @@ fun HomeTabContent(userEmail: String) {
 }
 
 @Composable
-fun SettingsTabContent(onLogout: () -> Unit) {
+fun SettingsTabContent(onLogout: () -> Unit, themeViewModel: ThemeViewModel) {
     val auth = FirebaseAuth.getInstance()
     val db = FirebaseFirestore.getInstance()
     val context = LocalContext.current
@@ -371,6 +372,28 @@ fun SettingsTabContent(onLogout: () -> Unit) {
             Text(stringResource(R.string.language_settings))
         }
 
+        Spacer(modifier = Modifier.height(16.dp))
+
+        // 深色模式切換
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .border(BorderStroke(1.dp, MaterialTheme.colorScheme.outline), RoundedCornerShape(12.dp))
+                .padding(horizontal = 16.dp, vertical = 8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(Icons.Default.Brightness4, contentDescription = null)
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(stringResource(R.string.dark_mode))
+            }
+            Switch(
+                checked = themeViewModel.isDarkMode,
+                onCheckedChange = { themeViewModel.toggleDarkMode() }
+            )
+        }
+
         Spacer(modifier = Modifier.weight(1f))
 
         // 登出按鈕
@@ -378,7 +401,10 @@ fun SettingsTabContent(onLogout: () -> Unit) {
             onClick = onLogout,
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(12.dp),
-            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFF5F5F5), contentColor = Color.Red),
+            colors = ButtonDefaults.buttonColors(
+                containerColor = if (themeViewModel.isDarkMode) Color(0xFF333333) else Color(0xFFF5F5F5),
+                contentColor = Color.Red
+            ),
             elevation = null
         ) {
             Text(stringResource(R.string.logout))

@@ -25,6 +25,7 @@
     <string name="edit_nickname">Edit Nickname</string>
     <string name="change_password">Change Password</string>
     <string name="language_settings">Language Settings</string>
+    <string name="dark_mode">Dark Mode</string>
     <string name="logout">Logout</string>
     <string name="confirm">Confirm</string>
     <string name="cancel">Cancel</string>
