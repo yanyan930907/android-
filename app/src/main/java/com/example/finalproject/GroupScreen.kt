@@ -35,16 +35,23 @@ data class Member(val uid: String, val name: String, val fcmToken: String?)
 @Composable
 fun GroupMainScreen(onBackToHome: () -> Unit) {
     var selectedGroup by remember { mutableStateOf<Group?>(null) }
+    var showWakeUpScreen by remember { mutableStateOf(false) }
 
     if (selectedGroup == null) {
         GroupListScreen(
             onGroupClick = { clickedGroup -> selectedGroup = clickedGroup },
             onBackToHome = onBackToHome
         )
+    } else if (showWakeUpScreen) {
+        WakeUpCallScreen(
+            group = selectedGroup!!,
+            onBackClick = { showWakeUpScreen = false }
+        )
     } else {
         GroupDetailScreen(
             group = selectedGroup!!,
-            onBackClick = { selectedGroup = null }
+            onBackClick = { selectedGroup = null },
+            onWakeUpClick = { showWakeUpScreen = true }
         )
     }
 }
@@ -160,21 +167,20 @@ fun GroupListScreen(onGroupClick: (Group) -> Unit, onBackToHome: () -> Unit) {
     }
 }
 
-// 4. 群組詳細頁面 (包含成員列表與呼叫起床按鈕)
+// 4. 群組詳細頁面
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun GroupDetailScreen(group: Group, onBackClick: () -> Unit) {
+fun GroupDetailScreen(group: Group, onBackClick: () -> Unit, onWakeUpClick: () -> Unit) {
     val db = FirebaseFirestore.getInstance()
     val context = LocalContext.current
     val clipboardManager = LocalClipboardManager.current
     val members = remember { mutableStateListOf<Member>() }
     var isLoading by remember { mutableStateOf(true) }
 
-    // 取得成員詳細資料
     LaunchedEffect(group.id) {
         if (group.memberIds.isNotEmpty()) {
             db.collection("users")
-                .whereIn("uid", group.memberIds.take(10)) // Firestore whereIn 限制 10 個
+                .whereIn("uid", group.memberIds.take(10))
                 .get()
                 .addOnSuccessListener { snapshot ->
                     members.clear()
@@ -187,9 +193,7 @@ fun GroupDetailScreen(group: Group, onBackClick: () -> Unit) {
                     }
                     isLoading = false
                 }
-                .addOnFailureListener {
-                    isLoading = false
-                }
+                .addOnFailureListener { isLoading = false }
         } else {
             isLoading = false
         }
@@ -209,7 +213,6 @@ fun GroupDetailScreen(group: Group, onBackClick: () -> Unit) {
             modifier = Modifier.fillMaxSize().padding(innerPadding).padding(16.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            // 邀請碼區塊
             Card(
                 modifier = Modifier.fillMaxWidth().clickable {
                     clipboardManager.setText(AnnotatedString(group.id))
@@ -229,7 +232,6 @@ fun GroupDetailScreen(group: Group, onBackClick: () -> Unit) {
             Spacer(modifier = Modifier.height(24.dp))
             Text("成員列表", modifier = Modifier.fillMaxWidth(), fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium)
             
-            // 成員列表
             Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
                 if (isLoading) {
                     CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
@@ -255,14 +257,127 @@ fun GroupDetailScreen(group: Group, onBackClick: () -> Unit) {
                 }
             }
 
-            // 呼叫起床按鈕
+            Button(
+                onClick = onWakeUpClick,
+                modifier = Modifier.fillMaxWidth().height(56.dp),
+                shape = RoundedCornerShape(12.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFF9800))
+            ) {
+                Icon(Icons.Default.NotificationsActive, contentDescription = null)
+                Spacer(modifier = Modifier.width(8.dp))
+                Text("呼叫起床", fontSize = 18.sp, fontWeight = FontWeight.Bold)
+            }
+        }
+    }
+}
+
+// 5. 呼叫起床畫面 (包含勾選成員與全選功能)
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun WakeUpCallScreen(group: Group, onBackClick: () -> Unit) {
+    val db = FirebaseFirestore.getInstance()
+    val context = LocalContext.current
+    val members = remember { mutableStateListOf<Member>() }
+    val selectedMembers = remember { mutableStateListOf<String>() }
+    var isLoading by remember { mutableStateOf(true) }
+
+    LaunchedEffect(group.id) {
+        if (group.memberIds.isNotEmpty()) {
+            db.collection("users")
+                .whereIn("uid", group.memberIds.take(10))
+                .get()
+                .addOnSuccessListener { snapshot ->
+                    members.clear()
+                    for (doc in snapshot.documents) {
+                        members.add(Member(
+                            uid = doc.getString("uid") ?: "",
+                            name = doc.getString("username") ?: "匿名成員",
+                            fcmToken = doc.getString("fcmToken")
+                        ))
+                    }
+                    isLoading = false
+                }
+                .addOnFailureListener { isLoading = false }
+        } else {
+            isLoading = false
+        }
+    }
+
+    val isAllSelected = members.isNotEmpty() && selectedMembers.size == members.size
+
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text("選擇呼叫對象", fontWeight = FontWeight.Bold) },
+                navigationIcon = {
+                    IconButton(onClick = onBackClick) { Icon(Icons.Default.ArrowBack, contentDescription = "返回") }
+                },
+                actions = {
+                    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(end = 8.dp)) {
+                        Text("全選", style = MaterialTheme.typography.bodyMedium)
+                        Checkbox(
+                            checked = isAllSelected,
+                            onCheckedChange = { checked ->
+                                selectedMembers.clear()
+                                if (checked) {
+                                    selectedMembers.addAll(members.map { it.uid })
+                                }
+                            }
+                        )
+                    }
+                }
+            )
+        }
+    ) { innerPadding ->
+        Column(
+            modifier = Modifier.fillMaxSize().padding(innerPadding).padding(16.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
+                if (isLoading) {
+                    CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
+                } else {
+                    LazyColumn(modifier = Modifier.fillMaxSize()) {
+                        items(members) { member ->
+                            val isSelected = selectedMembers.contains(member.uid)
+                            ListItem(
+                                headlineContent = { Text(member.name) },
+                                leadingContent = {
+                                    Box(modifier = Modifier.size(40.dp).background(MaterialTheme.colorScheme.secondaryContainer, CircleShape), contentAlignment = Alignment.Center) {
+                                        Text(member.name.take(1).uppercase(), fontWeight = FontWeight.Bold)
+                                    }
+                                },
+                                trailingContent = {
+                                    Checkbox(
+                                        checked = isSelected,
+                                        onCheckedChange = { checked ->
+                                            if (checked) selectedMembers.add(member.uid)
+                                            else selectedMembers.remove(member.uid)
+                                        }
+                                    )
+                                },
+                                modifier = Modifier.clickable {
+                                    if (isSelected) selectedMembers.remove(member.uid)
+                                    else selectedMembers.add(member.uid)
+                                }
+                            )
+                            HorizontalDivider(color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.1f))
+                        }
+                    }
+                }
+            }
+
             Button(
                 onClick = {
-                    Toast.makeText(context, "正在呼叫所有成員起床...", Toast.LENGTH_SHORT).show()
+                    if (selectedMembers.isEmpty()) {
+                        Toast.makeText(context, "請至少選擇一位成員", Toast.LENGTH_SHORT).show()
+                        return@Button
+                    }
                     
-                    val targetTokens = members.mapNotNull { it.fcmToken }
+                    val targetTokens = members.filter { selectedMembers.contains(it.uid) }.mapNotNull { it.fcmToken }
+                    
                     if (targetTokens.isEmpty()) {
-                        Toast.makeText(context, "目前沒有成員在線", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(context, "所選成員目前均不在線", Toast.LENGTH_SHORT).show()
                     } else {
                         db.collection("calls").add(hashMapOf(
                             "groupId" to group.id,
@@ -271,6 +386,7 @@ fun GroupDetailScreen(group: Group, onBackClick: () -> Unit) {
                             "timestamp" to FieldValue.serverTimestamp()
                         )).addOnSuccessListener {
                             Toast.makeText(context, "呼叫訊號已發出！", Toast.LENGTH_LONG).show()
+                            onBackClick() // 發送後返回
                         }
                     }
                 },
@@ -278,9 +394,9 @@ fun GroupDetailScreen(group: Group, onBackClick: () -> Unit) {
                 shape = RoundedCornerShape(12.dp),
                 colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFF9800))
             ) {
-                Icon(Icons.Default.NotificationsActive, contentDescription = null)
+                Icon(Icons.Default.Send, contentDescription = null)
                 Spacer(modifier = Modifier.width(8.dp))
-                Text("呼叫起床", fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                Text("確認發送 (${selectedMembers.size})", fontSize = 18.sp, fontWeight = FontWeight.Bold)
             }
         }
     }
