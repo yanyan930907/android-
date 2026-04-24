@@ -18,6 +18,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -104,7 +105,7 @@ fun GroupListScreen(onGroupClick: (Group) -> Unit, onBackToHome: () -> Unit) {
                         realGroups.clear()
                         for (doc in snapshot.documents) {
                             val id = doc.getString("groupId") ?: doc.id
-                            val name = doc.getString("groupName") ?: "未知群組"
+                            val name = doc.getString("groupName") ?: context.getString(R.string.unknown_group)
                             val members = doc.get("members") as? List<String> ?: emptyList()
                             realGroups.add(Group(id, name, members.size, members))
                         }
@@ -117,22 +118,22 @@ fun GroupListScreen(onGroupClick: (Group) -> Unit, onBackToHome: () -> Unit) {
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("我的群組", fontWeight = FontWeight.Bold) },
+                title = { Text(stringResource(R.string.my_groups), fontWeight = FontWeight.Bold) },
                 navigationIcon = {
                     IconButton(onClick = onBackToHome) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "回首頁")
+                        Icon(Icons.Default.ArrowBack, contentDescription = stringResource(R.string.back_to_home))
                     }
                 },
                 actions = {
                     TextButton(onClick = { showJoinDialog = true }) {
-                        Text("加入", color = MaterialTheme.colorScheme.primary)
+                        Text(stringResource(R.string.join), color = MaterialTheme.colorScheme.primary)
                     }
                 }
             )
         },
         floatingActionButton = {
             FloatingActionButton(onClick = { showCreateDialog = true }, containerColor = MaterialTheme.colorScheme.primary) {
-                Icon(Icons.Default.Add, contentDescription = "新增群組", tint = Color.White)
+                Icon(Icons.Default.Add, contentDescription = stringResource(R.string.add_group), tint = Color.White)
             }
         }
     ) { innerPadding ->
@@ -142,7 +143,7 @@ fun GroupListScreen(onGroupClick: (Group) -> Unit, onBackToHome: () -> Unit) {
             if (realGroups.isEmpty()) {
                 item {
                     Box(modifier = Modifier.fillParentMaxSize(), contentAlignment = Alignment.Center) {
-                        Text("目前沒有群組，點擊右下角建立一個吧！", color = Color.Gray)
+                        Text(stringResource(R.string.no_groups_yet), color = Color.Gray)
                     }
                 }
             } else {
@@ -155,7 +156,7 @@ fun GroupListScreen(onGroupClick: (Group) -> Unit, onBackToHome: () -> Unit) {
                         Row(modifier = Modifier.padding(20.dp), verticalAlignment = Alignment.CenterVertically) {
                             Column(modifier = Modifier.weight(1f)) {
                                 Text(text = group.name, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
-                                Text(text = "${group.memberCount} 位成員", style = MaterialTheme.typography.bodyMedium, color = Color.Gray)
+                                Text(text = stringResource(R.string.members_count, group.memberCount), style = MaterialTheme.typography.bodyMedium, color = Color.Gray)
                             }
                             Icon(Icons.Default.ChevronRight, contentDescription = null, tint = Color.Gray)
                         }
@@ -194,7 +195,7 @@ fun GroupListScreen(onGroupClick: (Group) -> Unit, onBackToHome: () -> Unit) {
 
                 batch.commit()
                     .addOnSuccessListener { showJoinDialog = false }
-                    .addOnFailureListener { Toast.makeText(context, "加入失敗，請檢查代碼", Toast.LENGTH_SHORT).show() }
+                    .addOnFailureListener { Toast.makeText(context, context.getString(R.string.join_failed), Toast.LENGTH_SHORT).show() }
             })
         }
     }
@@ -225,7 +226,7 @@ fun GroupDetailScreen(
                     for (doc in snapshot.documents) {
                         members.add(Member(
                             uid = doc.getString("uid") ?: "",
-                            name = doc.getString("username") ?: "匿名成員",
+                            name = doc.getString("username") ?: context.getString(R.string.anonymous_member),
                             fcmToken = doc.getString("fcmToken")
                         ))
                     }
@@ -242,7 +243,7 @@ fun GroupDetailScreen(
             TopAppBar(
                 title = { Text(group.name, fontWeight = FontWeight.Bold) },
                 navigationIcon = {
-                    IconButton(onClick = onBackClick) { Icon(Icons.Default.ArrowBack, contentDescription = "返回") }
+                    IconButton(onClick = onBackClick) { Icon(Icons.Default.ArrowBack, contentDescription = stringResource(R.string.cancel)) }
                 }
             )
         }
@@ -255,13 +256,13 @@ fun GroupDetailScreen(
             Card(
                 modifier = Modifier.fillMaxWidth().clickable {
                     clipboardManager.setText(AnnotatedString(group.id))
-                    Toast.makeText(context, "邀請碼已複製", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(context, context.getString(R.string.invitation_code_copied), Toast.LENGTH_SHORT).show()
                 },
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f))
             ) {
                 Row(modifier = Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
                     Column(modifier = Modifier.weight(1f)) {
-                        Text("群組邀請碼", style = MaterialTheme.typography.labelSmall)
+                        Text(stringResource(R.string.invitation_code_title), style = MaterialTheme.typography.labelSmall)
                         Text(group.id, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                     }
                     Icon(Icons.Default.ContentCopy, contentDescription = null, modifier = Modifier.size(20.dp))
@@ -279,11 +280,11 @@ fun GroupDetailScreen(
             ) {
                 Icon(Icons.Default.Leaderboard, contentDescription = null)
                 Spacer(modifier = Modifier.width(8.dp))
-                Text("查看排行榜", fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                Text(stringResource(R.string.view_leaderboard), fontSize = 18.sp, fontWeight = FontWeight.Bold)
             }
 
             Spacer(modifier = Modifier.height(16.dp))
-            Text("成員列表", modifier = Modifier.fillMaxWidth(), fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium)
+            Text(stringResource(R.string.member_list), modifier = Modifier.fillMaxWidth(), fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium)
 
             Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
                 if (isLoading) {
@@ -319,7 +320,7 @@ fun GroupDetailScreen(
             ) {
                 Icon(Icons.Default.NotificationsActive, contentDescription = null)
                 Spacer(modifier = Modifier.width(8.dp))
-                Text("呼叫起床", fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                Text(stringResource(R.string.call_to_wake_up), fontSize = 18.sp, fontWeight = FontWeight.Bold)
             }
         }
     }
@@ -345,7 +346,7 @@ fun WakeUpCallScreen(group: Group, onBackClick: () -> Unit) {
                     for (doc in snapshot.documents) {
                         members.add(Member(
                             uid = doc.getString("uid") ?: "",
-                            name = doc.getString("username") ?: "匿名成員",
+                            name = doc.getString("username") ?: context.getString(R.string.anonymous_member),
                             fcmToken = doc.getString("fcmToken")
                         ))
                     }
@@ -360,13 +361,13 @@ fun WakeUpCallScreen(group: Group, onBackClick: () -> Unit) {
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("選擇呼叫對象", fontWeight = FontWeight.Bold) },
+                title = { Text(stringResource(R.string.select_call_targets), fontWeight = FontWeight.Bold) },
                 navigationIcon = {
-                    IconButton(onClick = onBackClick) { Icon(Icons.Default.ArrowBack, contentDescription = "返回") }
+                    IconButton(onClick = onBackClick) { Icon(Icons.Default.ArrowBack, contentDescription = stringResource(R.string.cancel)) }
                 },
                 actions = {
                     Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(end = 8.dp)) {
-                        Text("全選", style = MaterialTheme.typography.bodyMedium)
+                        Text(stringResource(R.string.select_all), style = MaterialTheme.typography.bodyMedium)
                         Checkbox(
                             checked = isAllSelected,
                             onCheckedChange = { checked ->
@@ -411,11 +412,11 @@ fun WakeUpCallScreen(group: Group, onBackClick: () -> Unit) {
             Button(
                 onClick = {
                     if (selectedMembers.isEmpty()) {
-                        Toast.makeText(context, "請至少選擇一位成員", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(context, context.getString(R.string.select_at_least_one), Toast.LENGTH_SHORT).show()
                         return@Button
                     }
                     // 這裡執行呼叫邏輯...
-                    Toast.makeText(context, "呼叫訊號已發出！", Toast.LENGTH_LONG).show()
+                    Toast.makeText(context, context.getString(R.string.call_sent), Toast.LENGTH_LONG).show()
                     onBackClick()
                 },
                 modifier = Modifier.fillMaxWidth().height(56.dp),
@@ -424,7 +425,7 @@ fun WakeUpCallScreen(group: Group, onBackClick: () -> Unit) {
             ) {
                 Icon(Icons.Default.Send, contentDescription = null)
                 Spacer(modifier = Modifier.width(8.dp))
-                Text("確認發送 (${selectedMembers.size})", fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                Text(stringResource(R.string.confirm_send, selectedMembers.size), fontSize = 18.sp, fontWeight = FontWeight.Bold)
             }
         }
     }
@@ -436,10 +437,10 @@ fun CreateGroupDialog(onDismiss: () -> Unit, onCreate: (String) -> Unit) {
     var name by remember { mutableStateOf("") }
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("建立群組") },
-        text = { OutlinedTextField(value = name, onValueChange = { name = it }, label = { Text("群組名稱") }) },
-        confirmButton = { Button(onClick = { if(name.isNotEmpty()) onCreate(name) }) { Text("建立") } },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("取消") } }
+        title = { Text(stringResource(R.string.create_group)) },
+        text = { OutlinedTextField(value = name, onValueChange = { name = it }, label = { Text(stringResource(R.string.group_name)) }) },
+        confirmButton = { Button(onClick = { if(name.isNotEmpty()) onCreate(name) }) { Text(stringResource(R.string.create)) } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.cancel)) } }
     )
 }
 
@@ -448,9 +449,9 @@ fun JoinGroupDialog(onDismiss: () -> Unit, onJoin: (String) -> Unit) {
     var code by remember { mutableStateOf("") }
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("加入群組") },
-        text = { OutlinedTextField(value = code, onValueChange = { code = it }, label = { Text("邀請碼") }) },
-        confirmButton = { Button(onClick = { if(code.isNotEmpty()) onJoin(code) }) { Text("加入") } },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("取消") } }
+        title = { Text(stringResource(R.string.join_group)) },
+        text = { OutlinedTextField(value = code, onValueChange = { code = it }, label = { Text(stringResource(R.string.invite_code)) }) },
+        confirmButton = { Button(onClick = { if(code.isNotEmpty()) onJoin(code) }) { Text(stringResource(R.string.join)) } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.cancel)) } }
     )
 }
