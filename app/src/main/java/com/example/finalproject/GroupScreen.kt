@@ -415,9 +415,33 @@ fun WakeUpCallScreen(group: Group, onBackClick: () -> Unit) {
                         Toast.makeText(context, context.getString(R.string.select_at_least_one), Toast.LENGTH_SHORT).show()
                         return@Button
                     }
-                    // 這裡執行呼叫邏輯...
-                    Toast.makeText(context, context.getString(R.string.call_sent), Toast.LENGTH_LONG).show()
-                    onBackClick()
+                    val auth = FirebaseAuth.getInstance()
+                    val uid = auth.currentUser?.uid ?: return@Button
+
+                    // 👇 修正：先抓取發送者在 Firestore 裡的 username
+                    db.collection("users").document(uid).get().addOnSuccessListener { userDoc ->
+                        val realSenderName = userDoc.getString("username") ?: "群組成員"
+
+                        val callData = hashMapOf(
+                            "senderId" to uid,
+                            "senderName" to realSenderName,
+                            "groupId" to group.id,
+                            "groupName" to group.name,
+                            "targetUids" to selectedMembers.toList(),
+                            "timestamp" to FieldValue.serverTimestamp(),
+                            "status" to "pending"
+                        )
+
+                        // 寫入 Firestore 觸發雲端函數
+                        db.collection("calls").add(callData)
+                            .addOnSuccessListener {
+                                Toast.makeText(context, "呼叫請求已發送至伺服器！", Toast.LENGTH_SHORT).show()
+                                onBackClick()
+                            }
+                            .addOnFailureListener { e ->
+                                Toast.makeText(context, "發送失敗: ${e.message}", Toast.LENGTH_SHORT).show()
+                            }
+                    }
                 },
                 modifier = Modifier.fillMaxWidth().height(56.dp),
                 shape = RoundedCornerShape(12.dp),
