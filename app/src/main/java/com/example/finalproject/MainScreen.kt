@@ -150,7 +150,7 @@ fun FocusTabContent(viewModel: FocusViewModel) {
             modifier = Modifier
                 .fillMaxWidth()
                 .border(BorderStroke(1.dp, Color.LightGray), RoundedCornerShape(12.dp))
-                .clickable { expanded = true }
+                .clickable(enabled = !viewModel.isRunning && viewModel.timerSeconds == 0) { expanded = true }
                 .padding(16.dp)
         ) {
             Row(
@@ -158,8 +158,17 @@ fun FocusTabContent(viewModel: FocusViewModel) {
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                Text(text = viewModel.selectedType)
-                Icon(Icons.Default.ArrowDropDown, contentDescription = null)
+                val isInteractionDisabled = viewModel.isRunning || viewModel.timerSeconds > 0
+                Text(
+                    text = viewModel.selectedType,
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = if (isInteractionDisabled) MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f) else MaterialTheme.colorScheme.onSurface
+                )
+                Icon(
+                    Icons.Default.ArrowDropDown, 
+                    contentDescription = null, 
+                    tint = if (isInteractionDisabled) Color.Gray.copy(alpha = 0.38f) else Color.Gray
+                )
             }
             DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
                 options.forEach { option ->
@@ -181,18 +190,87 @@ fun FocusTabContent(viewModel: FocusViewModel) {
             Box(modifier = Modifier.width(60.dp).height(2.dp).background(mainColor.copy(alpha = 0.3f)))
         }
 
-        Surface(
-            modifier = Modifier.size(180.dp).clip(CircleShape).clickable { viewModel.toggleTimer() },
-            color = if (viewModel.isRunning) Color(0xFFEEEEEE) else mainColor,
-            border = if (viewModel.isRunning) BorderStroke(1.dp, Color.LightGray) else null
-        ) {
-            Box(contentAlignment = Alignment.Center) {
-                Text(
-                    text = if (viewModel.isRunning) "STOP" else "START",
-                    fontSize = 20.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = if (viewModel.isRunning) Color.DarkGray else Color.White
-                )
+        // 3. 按鈕區域
+        if (viewModel.isRunning) {
+            // 執行中：顯示 STOP 鍵
+            Surface(
+                modifier = Modifier
+                    .size(180.dp)
+                    .clip(CircleShape)
+                    .clickable { viewModel.toggleTimer() },
+                color = Color.Red
+            ) {
+                Box(contentAlignment = Alignment.Center) {
+                    Text(
+                        text = "STOP",
+                        fontSize = 20.sp,
+                        fontWeight = FontWeight.Bold,
+                        letterSpacing = 2.sp,
+                        color = Color.White
+                    )
+                }
+            }
+        } else if (viewModel.timerSeconds > 0) {
+            // 暫停中：顯示 CONTINUE 與 COMPLETE 鍵
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceEvenly,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                // CONTINUE 鍵
+                Surface(
+                    modifier = Modifier
+                        .size(120.dp)
+                        .clip(CircleShape)
+                        .clickable { viewModel.startTimer() },
+                    color = mainColor
+                ) {
+                    Box(contentAlignment = Alignment.Center) {
+                        Text(
+                            text = "CONTINUE",
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color.White
+                        )
+                    }
+                }
+
+                // COMPLETE 鍵
+                Surface(
+                    modifier = Modifier
+                        .size(120.dp)
+                        .clip(CircleShape)
+                        .clickable { viewModel.completeTimer() },
+                    color = Color.Gray // 使用灰色或另一個顏色區分
+                ) {
+                    Box(contentAlignment = Alignment.Center) {
+                        Text(
+                            text = "COMPLETE",
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color.White
+                        )
+                    }
+                }
+            }
+        } else {
+            // 未開始：顯示 START 鍵
+            Surface(
+                modifier = Modifier
+                    .size(180.dp)
+                    .clip(CircleShape)
+                    .clickable { viewModel.toggleTimer() },
+                color = mainColor
+            ) {
+                Box(contentAlignment = Alignment.Center) {
+                    Text(
+                        text = "START",
+                        fontSize = 20.sp,
+                        fontWeight = FontWeight.Bold,
+                        letterSpacing = 2.sp,
+                        color = Color.White
+                    )
+                }
             }
         }
         Spacer(modifier = Modifier.height(20.dp))
