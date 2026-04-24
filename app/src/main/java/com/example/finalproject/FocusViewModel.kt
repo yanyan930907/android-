@@ -11,17 +11,17 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.util.Date
-
+import com.google.firebase.firestore.FieldValue
 class FocusViewModel : ViewModel() {
     var timerSeconds by mutableStateOf(0)
         private set
-    
+
     var isRunning by mutableStateOf(false)
         private set
-    
+
     var selectedType by mutableStateOf("工作")
         private set
-    
+
     private var timerJob: Job? = null
     private val db = FirebaseFirestore.getInstance()
     private val auth = FirebaseAuth.getInstance()
@@ -65,7 +65,7 @@ class FocusViewModel : ViewModel() {
     private fun saveRecordToFirebase() {
         val userId = auth.currentUser?.uid ?: return
         val duration = timerSeconds
-        if (duration <= 1) return // Don't save if it's too short
+        if (duration <= 1) return // 太短不存
 
         val record = hashMapOf(
             "type" to selectedType,
@@ -74,10 +74,31 @@ class FocusViewModel : ViewModel() {
             "userId" to userId
         )
 
-        db.collection("focus_records")
-            .add(record)
+        val batch = db.batch()
+
+        // 1. 存入單次歷史紀錄 (focus_records)
+        val recordRef = db.collection("focus_records").document()
+        batch.set(recordRef, record)
+
+        // 2. 更新使用者的總計數據 (users)
+        val userRef = db.collection("users").document(userId)
+
+        // A: 累加所有專注的「總時間」 (給排行榜用的)
+        batch.update(userRef, "totalFocusTime", FieldValue.increment(duration.toLong()))
+
+        // B: 【新增】累加「特定分類」的時間 (給未來的圓餅圖用的)
+        // 使用點記法 "categoryTotals.工作" 來精準更新 Map 裡面的值
+        batch.update(userRef, "categoryTotals.$selectedType", FieldValue.increment(duration.toLong()))
+
+        // 提交寫入
+        batch.commit()
             .addOnSuccessListener {
-                timerSeconds = 0 
+                timerSeconds = 0
+                // 這裡可以加上成功後的處理，例如 Toast 或 Log
+            }
+            .addOnFailureListener { e ->
+                // 這裡可以處理寫入失敗的狀況
+                println("存檔失敗: ${e.message}")
             }
     }
 
