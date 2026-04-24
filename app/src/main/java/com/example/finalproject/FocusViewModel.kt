@@ -33,9 +33,16 @@ class FocusViewModel : ViewModel() {
     fun toggleTimer() {
         if (isRunning) {
             pauseTimer()
-            saveRecordToFirebase()
         } else {
             startTimer()
+        }
+    }
+
+    fun completeTimer() {
+        saveRecordToFirebase()
+        // 即使存檔失敗或時間太短，點擊完成也應該重置計時器
+        if (timerSeconds <= 1) {
+            timerSeconds = 0
         }
     }
 
