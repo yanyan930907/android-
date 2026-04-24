@@ -5,6 +5,8 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import com.google.firebase.auth.FirebaseAuth
@@ -14,6 +16,7 @@ import com.google.firebase.firestore.FirebaseFirestore // 👇 匯入 Firestore
 fun SignUpScreen(onSignUpSuccess: () -> Unit, onBackToLogin: () -> Unit) {
     val auth = FirebaseAuth.getInstance()
     val db = FirebaseFirestore.getInstance() // 👇 取得資料庫實例
+    val context = LocalContext.current
 
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
@@ -26,14 +29,14 @@ fun SignUpScreen(onSignUpSuccess: () -> Unit, onBackToLogin: () -> Unit) {
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
-        Text(text = "建立帳號", style = MaterialTheme.typography.headlineLarge)
+        Text(text = stringResource(R.string.create_account), style = MaterialTheme.typography.headlineLarge)
         Spacer(modifier = Modifier.height(48.dp))
 
         // 👇 新增暱稱輸入框
         OutlinedTextField(
             value = username,
             onValueChange = { username = it },
-            label = { Text("暱稱") },
+            label = { Text(stringResource(R.string.nickname)) },
             singleLine = true,
             modifier = Modifier.fillMaxWidth()
         )
@@ -42,7 +45,7 @@ fun SignUpScreen(onSignUpSuccess: () -> Unit, onBackToLogin: () -> Unit) {
         OutlinedTextField(
             value = email,
             onValueChange = { email = it },
-            label = { Text("Email") },
+            label = { Text(stringResource(R.string.email)) },
             singleLine = true,
             modifier = Modifier.fillMaxWidth()
         )
@@ -51,7 +54,7 @@ fun SignUpScreen(onSignUpSuccess: () -> Unit, onBackToLogin: () -> Unit) {
         OutlinedTextField(
             value = password,
             onValueChange = { password = it },
-            label = { Text("密碼 (至少6碼)") },
+            label = { Text(stringResource(R.string.password_hint)) },
             singleLine = true,
             visualTransformation = PasswordVisualTransformation(),
             modifier = Modifier.fillMaxWidth()
@@ -61,7 +64,7 @@ fun SignUpScreen(onSignUpSuccess: () -> Unit, onBackToLogin: () -> Unit) {
         OutlinedTextField(
             value = confirmPassword,
             onValueChange = { confirmPassword = it },
-            label = { Text("確認密碼") },
+            label = { Text(stringResource(R.string.confirm_password)) },
             singleLine = true,
             visualTransformation = PasswordVisualTransformation(),
             modifier = Modifier.fillMaxWidth()
@@ -71,15 +74,15 @@ fun SignUpScreen(onSignUpSuccess: () -> Unit, onBackToLogin: () -> Unit) {
         Button(
             onClick = {
                 if (username.isEmpty() || email.isEmpty() || password.isEmpty()) {
-                    errorMessage = "請填寫所有欄位"
+                    errorMessage = context.getString(R.string.fill_all)
                     return@Button
                 }
                 if (password != confirmPassword) {
-                    errorMessage = "兩次密碼輸入不一致"
+                    errorMessage = context.getString(R.string.password_mismatch)
                     return@Button
                 }
                 if (password.length < 6) {
-                    errorMessage = "密碼長度至少需 6 碼"
+                    errorMessage = context.getString(R.string.password_too_short)
                     return@Button
                 }
 
@@ -105,7 +108,7 @@ fun SignUpScreen(onSignUpSuccess: () -> Unit, onBackToLogin: () -> Unit) {
                                         onSignUpSuccess() // 資料庫寫入成功才跳轉畫面
                                     }
                                     .addOnFailureListener { e ->
-                                        errorMessage = "資料庫建立失敗: ${e.message}"
+                                        errorMessage = "${context.getString(R.string.db_failed)}: ${e.message}"
                                     }
                             }
                         } else {
@@ -115,11 +118,11 @@ fun SignUpScreen(onSignUpSuccess: () -> Unit, onBackToLogin: () -> Unit) {
             },
             modifier = Modifier.fillMaxWidth()
         ) {
-            Text("註冊")
+            Text(stringResource(R.string.signup_button))
         }
 
         TextButton(onClick = onBackToLogin) {
-            Text("已有帳號？返回登入")
+            Text(stringResource(R.string.back_to_login))
         }
 
         if (errorMessage != null) {

@@ -9,6 +9,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import com.google.android.gms.auth.api.signin.GoogleSignIn
@@ -73,18 +74,18 @@ fun LoginScreen(
                                 onLoginSuccess()
                             }
                             .addOnFailureListener { e ->
-                                errorMessage = "資料庫建立失敗: ${e.message}"
+                                errorMessage = "${context.getString(R.string.db_failed)}: ${e.message}"
                             }
                     } else {
                         // 如果是老手登入，資料庫早就有資料了，直接跳轉即可
                         onLoginSuccess()
                     }
                 } else {
-                    errorMessage = authTask.exception?.localizedMessage ?: "Firebase 驗證失敗"
+                    errorMessage = authTask.exception?.localizedMessage ?: context.getString(R.string.auth_failed)
                 }
             }
         } catch (e: ApiException) {
-            errorMessage = "Google 登入取消或失敗 (錯誤碼: ${e.statusCode})"
+            errorMessage = "${context.getString(R.string.google_failed)} (代碼: ${e.statusCode})"
         }
     }
 
@@ -93,13 +94,13 @@ fun LoginScreen(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
-        Text(text = "社交專注鬧鐘", style = MaterialTheme.typography.headlineLarge)
+        Text(text = stringResource(R.string.app_title), style = MaterialTheme.typography.headlineLarge)
         Spacer(modifier = Modifier.height(48.dp))
 
         OutlinedTextField(
             value = email,
             onValueChange = { email = it },
-            label = { Text("Email") },
+            label = { Text(stringResource(R.string.email)) },
             singleLine = true,
             modifier = Modifier.fillMaxWidth()
         )
@@ -108,7 +109,7 @@ fun LoginScreen(
         OutlinedTextField(
             value = password,
             onValueChange = { password = it },
-            label = { Text("密碼") },
+            label = { Text(stringResource(R.string.password)) },
             singleLine = true,
             visualTransformation = PasswordVisualTransformation(),
             modifier = Modifier.fillMaxWidth()
@@ -127,12 +128,12 @@ fun LoginScreen(
             },
             modifier = Modifier.fillMaxWidth()
         ) {
-            Text("Email 登入")
+            Text(stringResource(R.string.login_button))
         }
 
         // 修改為純導航功能
         TextButton(onClick = onNavigateToSignUp) {
-            Text("沒有帳號？點此註冊")
+            Text(stringResource(R.string.no_account))
         }
 
         HorizontalDivider(modifier = Modifier.padding(vertical = 24.dp))
@@ -148,7 +149,7 @@ fun LoginScreen(
                 contentColor = MaterialTheme.colorScheme.onSecondaryContainer
             )
         ) {
-            Text("使用 Google 帳號登入")
+            Text(stringResource(R.string.google_login))
         }
 
         if (errorMessage != null) {

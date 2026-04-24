@@ -27,15 +27,19 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.compose.ui.res.stringResource
+import androidx.appcompat.app.AppCompatDelegate
+import androidx.core.os.LocaleListCompat
+import android.content.Intent
 import com.google.firebase.auth.EmailAuthProvider
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 
-sealed class Screen(val route: String, val title: String, val icon: ImageVector) {
-    object Home : Screen("home_tab", "主頁", Icons.Default.Home)
-    object Focus : Screen("focus_tab", "專注", Icons.Default.SelfImprovement)
-    object Groups : Screen("groups_tab", "群組", Icons.Default.Groups)
-    object Settings : Screen("settings_tab", "設定", Icons.Default.Settings)
+sealed class Screen(val route: String, val titleResId: Int, val icon: ImageVector) {
+    object Home : Screen("home_tab", R.string.tab_home, Icons.Default.Home)
+    object Focus : Screen("focus_tab", R.string.tab_focus, Icons.Default.SelfImprovement)
+    object Groups : Screen("groups_tab", R.string.tab_groups, Icons.Default.Groups)
+    object Settings : Screen("settings_tab", R.string.tab_settings, Icons.Default.Settings)
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -78,7 +82,7 @@ fun MainAppContent(userEmail: String, onLogout: () -> Unit) {
                 CenterAlignedTopAppBar(
                     title = { 
                         Text(
-                            text = selectedScreen.title,
+                            text = stringResource(selectedScreen.titleResId),
                             fontWeight = FontWeight.Bold,
                             fontSize = 20.sp,
                             color = MaterialTheme.colorScheme.onSurface
@@ -97,8 +101,8 @@ fun MainAppContent(userEmail: String, onLogout: () -> Unit) {
             ) {
                 items.forEach { screen ->
                     NavigationBarItem(
-                        icon = { Icon(screen.icon, contentDescription = screen.title) },
-                        label = { Text(screen.title) },
+                        icon = { Icon(screen.icon, contentDescription = stringResource(screen.titleResId)) },
+                        label = { Text(stringResource(screen.titleResId)) },
                         selected = selectedScreen == screen,
                         onClick = { selectedScreen = screen },
                         colors = NavigationBarItemDefaults.colors(
@@ -136,7 +140,13 @@ fun MainAppContent(userEmail: String, onLogout: () -> Unit) {
 @Composable
 fun FocusTabContent(viewModel: FocusViewModel) {
     var expanded by remember { mutableStateOf(false) }
-    val options = listOf("工作", "學習", "運動", "休息", "閱讀")
+    val options = listOf(
+        R.string.cat_work to "工作",
+        R.string.cat_study to "學習",
+        R.string.cat_exercise to "運動",
+        R.string.cat_rest to "休息",
+        R.string.cat_read to "閱讀"
+    )
     val mainColor = MaterialTheme.colorScheme.primary
 
     Column(
@@ -159,8 +169,16 @@ fun FocusTabContent(viewModel: FocusViewModel) {
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 val isInteractionDisabled = viewModel.isRunning || viewModel.timerSeconds > 0
+                val currentDisplayType = when(viewModel.selectedType) {
+                    "工作" -> stringResource(R.string.cat_work)
+                    "學習" -> stringResource(R.string.cat_study)
+                    "運動" -> stringResource(R.string.cat_exercise)
+                    "休息" -> stringResource(R.string.cat_rest)
+                    "閱讀" -> stringResource(R.string.cat_read)
+                    else -> viewModel.selectedType
+                }
                 Text(
-                    text = viewModel.selectedType,
+                    text = currentDisplayType,
                     style = MaterialTheme.typography.bodyLarge,
                     color = if (isInteractionDisabled) MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f) else MaterialTheme.colorScheme.onSurface
                 )
@@ -171,9 +189,9 @@ fun FocusTabContent(viewModel: FocusViewModel) {
                 )
             }
             DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
-                options.forEach { option ->
-                    DropdownMenuItem(text = { Text(option) }, onClick = {
-                        viewModel.onTypeChange(option)
+                options.forEach { (resId, internalName) ->
+                    DropdownMenuItem(text = { Text(stringResource(resId)) }, onClick = {
+                        viewModel.onTypeChange(internalName)
                         expanded = false
                     })
                 }
@@ -279,7 +297,8 @@ fun FocusTabContent(viewModel: FocusViewModel) {
 
 @Composable
 fun HomeTabContent(userEmail: String) {
-    var username by remember { mutableStateOf("載入中...") }
+    val loadingText = stringResource(R.string.loading)
+    var username by remember { mutableStateOf(loadingText) }
     val uid = FirebaseAuth.getInstance().currentUser?.uid
 
     LaunchedEffect(uid) {
@@ -292,7 +311,7 @@ fun HomeTabContent(userEmail: String) {
     }
 
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        Text(text = "歡迎回來，$username", style = MaterialTheme.typography.headlineSmall)
+        Text(text = stringResource(R.string.welcome_back, username), style = MaterialTheme.typography.headlineSmall)
         Text(text = userEmail, style = MaterialTheme.typography.bodyMedium, color = Color.Gray)
     }
 }
@@ -306,6 +325,7 @@ fun SettingsTabContent(onLogout: () -> Unit) {
 
     var showNameDialog by remember { mutableStateOf(false) }
     var showPwdDialog by remember { mutableStateOf(false) }
+    var showLanguageDialog by remember { mutableStateOf(false) }
 
     Column(
         modifier = Modifier.fillMaxSize().padding(24.dp),
@@ -322,7 +342,7 @@ fun SettingsTabContent(onLogout: () -> Unit) {
         ) {
             Icon(Icons.Default.Edit, contentDescription = null)
             Spacer(modifier = Modifier.width(8.dp))
-            Text("修改暱稱")
+            Text(stringResource(R.string.edit_nickname))
         }
 
         Spacer(modifier = Modifier.height(16.dp))
@@ -335,7 +355,20 @@ fun SettingsTabContent(onLogout: () -> Unit) {
         ) {
             Icon(Icons.Default.Lock, contentDescription = null)
             Spacer(modifier = Modifier.width(8.dp))
-            Text("修改密碼")
+            Text(stringResource(R.string.change_password))
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        // 語言設定按鈕
+        OutlinedButton(
+            onClick = { showLanguageDialog = true },
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(12.dp)
+        ) {
+            Icon(Icons.Default.Language, contentDescription = null)
+            Spacer(modifier = Modifier.width(8.dp))
+            Text(stringResource(R.string.language_settings))
         }
 
         Spacer(modifier = Modifier.weight(1f))
@@ -348,8 +381,59 @@ fun SettingsTabContent(onLogout: () -> Unit) {
             colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFF5F5F5), contentColor = Color.Red),
             elevation = null
         ) {
-            Text("登出帳號")
+            Text(stringResource(R.string.logout))
         }
+    }
+
+    // 語言選擇彈窗
+    if (showLanguageDialog) {
+        AlertDialog(
+            onDismissRequest = { showLanguageDialog = false },
+            title = { Text(stringResource(R.string.select_language)) },
+            text = {
+                Column {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable {
+                                val appLocale: LocaleListCompat = LocaleListCompat.forLanguageTags("zh-TW")
+                                AppCompatDelegate.setApplicationLocales(appLocale)
+                                showLanguageDialog = false
+                                // 重啟 App 以確保語言生效
+                                val intent = Intent(context, MainActivity::class.java)
+                                intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)
+                                context.startActivity(intent)
+                            }
+                            .padding(16.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(stringResource(R.string.lang_zh))
+                    }
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable {
+                                val appLocale: LocaleListCompat = LocaleListCompat.forLanguageTags("en")
+                                AppCompatDelegate.setApplicationLocales(appLocale)
+                                showLanguageDialog = false
+                                // 重啟 App 以確保語言生效
+                                val intent = Intent(context, MainActivity::class.java)
+                                intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)
+                                context.startActivity(intent)
+                            }
+                            .padding(16.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(stringResource(R.string.lang_en))
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { showLanguageDialog = false }) {
+                    Text(stringResource(R.string.cancel))
+                }
+            }
+        )
     }
 
     // 修改暱稱彈窗
@@ -357,22 +441,22 @@ fun SettingsTabContent(onLogout: () -> Unit) {
         var newName by remember { mutableStateOf("") }
         AlertDialog(
             onDismissRequest = { showNameDialog = false },
-            title = { Text("修改暱稱") },
+            title = { Text(stringResource(R.string.edit_nickname)) },
             text = {
-                OutlinedTextField(value = newName, onValueChange = { newName = it }, label = { Text("新暱稱") })
+                OutlinedTextField(value = newName, onValueChange = { newName = it }, label = { Text(stringResource(R.string.new_nickname)) })
             },
             confirmButton = {
                 Button(onClick = {
                     if (newName.isNotBlank() && user != null) {
                         db.collection("users").document(user.uid).update("username", newName)
                             .addOnSuccessListener {
-                                Toast.makeText(context, "暱稱已更新", Toast.LENGTH_SHORT).show()
+                                Toast.makeText(context, context.getString(R.string.update_success), Toast.LENGTH_SHORT).show()
                                 showNameDialog = false
                             }
                     }
-                }) { Text("確定") }
+                }) { Text(stringResource(R.string.confirm)) }
             },
-            dismissButton = { TextButton(onClick = { showNameDialog = false }) { Text("取消") } }
+            dismissButton = { TextButton(onClick = { showNameDialog = false }) { Text(stringResource(R.string.cancel)) } }
         )
     }
 
@@ -382,18 +466,18 @@ fun SettingsTabContent(onLogout: () -> Unit) {
         var newPwd by remember { mutableStateOf("") }
         AlertDialog(
             onDismissRequest = { showPwdDialog = false },
-            title = { Text("修改密碼") },
+            title = { Text(stringResource(R.string.change_password)) },
             text = {
                 Column {
                     OutlinedTextField(
                         value = oldPwd, onValueChange = { oldPwd = it },
-                        label = { Text("原密碼") },
+                        label = { Text(stringResource(R.string.old_password)) },
                         visualTransformation = PasswordVisualTransformation()
                     )
                     Spacer(modifier = Modifier.height(8.dp))
                     OutlinedTextField(
                         value = newPwd, onValueChange = { newPwd = it },
-                        label = { Text("新密碼 (至少6碼)") },
+                        label = { Text(stringResource(R.string.new_password_hint)) },
                         visualTransformation = PasswordVisualTransformation()
                     )
                 }
@@ -405,21 +489,21 @@ fun SettingsTabContent(onLogout: () -> Unit) {
                         user.reauthenticate(credential).addOnCompleteListener { reAuthTask ->
                             if (reAuthTask.isSuccessful) {
                                 user.updatePassword(newPwd).addOnSuccessListener {
-                                    Toast.makeText(context, "密碼已更新", Toast.LENGTH_SHORT).show()
+                                    Toast.makeText(context, context.getString(R.string.update_success), Toast.LENGTH_SHORT).show()
                                     showPwdDialog = false
                                 }.addOnFailureListener {
-                                    Toast.makeText(context, "更新失敗: ${it.message}", Toast.LENGTH_SHORT).show()
+                                    Toast.makeText(context, "${context.getString(R.string.update_failed)}: ${it.message}", Toast.LENGTH_SHORT).show()
                                 }
                             } else {
-                                Toast.makeText(context, "原密碼錯誤", Toast.LENGTH_SHORT).show()
+                                Toast.makeText(context, context.getString(R.string.wrong_password), Toast.LENGTH_SHORT).show()
                             }
                         }
                     } else {
-                        Toast.makeText(context, "新密碼格式不正確", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(context, context.getString(R.string.invalid_password), Toast.LENGTH_SHORT).show()
                     }
-                }) { Text("確定") }
+                }) { Text(stringResource(R.string.confirm)) }
             },
-            dismissButton = { TextButton(onClick = { showPwdDialog = false }) { Text("取消") } }
+            dismissButton = { TextButton(onClick = { showPwdDialog = false }) { Text(stringResource(R.string.cancel)) } }
         )
     }
 }
